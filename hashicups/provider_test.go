@@ -18,13 +18,19 @@ func init() {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if ip := os.Getenv("HASHICUPS_IP"); ip == "" {
-		t.Fatal("HASHICUPS_IP must be set for acceptance tests")
+	if ip := os.Getenv("HASHICUPS_URL"); ip == "" {
+		t.Fatal("HASHICUPS_URL must be set for acceptance tests, e.g. http://myhashicups:19090")
 	}
 	if err := os.Getenv("HASHICUPS_USERNAME"); err == "" {
 		t.Fatal("HASHICUPS_USERNAME must be set for acceptance tests")
 	}
 	if err := os.Getenv("HASHICUPS_PASSWORD"); err == "" {
 		t.Fatal("HASHICUPS_PASSWORD must be set for acceptance tests")
+	}
+}
+
+func testAccPreCheckNoAuth(t *testing.T) {
+	if ip := os.Getenv("HASHICUPS_URL"); ip == "" {
+		t.Fatal("HASHICUPS_URL must be set for acceptance tests, e.g. http://myhashicups:19090")
 	}
 }

@@ -10,6 +10,7 @@ terraform {
 provider "hashicups" {
   username = "education"
   password = "test123"
+  url      = "http://192.168.1.203:19090"
 }
 
 module "psl" {

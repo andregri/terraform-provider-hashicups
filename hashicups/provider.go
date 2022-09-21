@@ -2,8 +2,6 @@ package hashicups
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	hashicups "github.com/hashicorp-demoapp/hashicups-client-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -25,6 +23,11 @@ func Provider() *schema.Provider {
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("HASHICUPS_PASSWORD", nil),
 			},
+			"url": {
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("HASHICUPS_URL", nil),
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"hashicups_order": resourceOrder(),
@@ -40,6 +43,7 @@ func Provider() *schema.Provider {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
+	url := d.Get("url").(string)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -49,8 +53,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		Summary:  "Warning Message Summary",
 		Detail:   "This is the detailed warning message from providerConfigure",
 	})*/
-
-	url := fmt.Sprintf("http://%s:19090", os.Getenv("HASHICUPS_IP"))
 
 	if (username != "") && (password != "") {
 		c, err := hashicups.NewClient(&url, &username, &password)

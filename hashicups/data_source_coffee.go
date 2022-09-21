@@ -2,13 +2,10 @@ package hashicups
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
 	"strconv"
 	"time"
 
+	hc "github.com/hashicorp-demoapp/hashicups-client-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -86,30 +83,18 @@ func dataSourceCoffees() *schema.Resource {
 }
 
 func dataSourceCoffeesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := &http.Client{Timeout: 10 * time.Second}
+	c := m.(*hc.Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	url := fmt.Sprintf("http://%s:19090", os.Getenv("HASHICUPS_IP"))
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/coffees", url), nil)
+	coffees, err := c.GetCoffees()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	r, err := client.Do(req)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	defer r.Body.Close()
-
-	coffees := make([]map[string]interface{}, 0)
-	err = json.NewDecoder(r.Body).Decode(&coffees)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set("coffees", coffees); err != nil {
+	flattenedCoffees := flattenCoffeesData(&coffees)
+	if err := d.Set("coffees", flattenedCoffees); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -117,4 +102,18 @@ func dataSourceCoffeesRead(ctx context.Context, d *schema.ResourceData, m interf
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
 
 	return diags
+}
+
+func flattenCoffeesData(coffees *[]hc.Coffee) []interface{} {
+	if coffees != nil {
+		cs := make([]interface{}, len(*coffees))
+
+		for i, coffee := range *coffees {
+			cs[i] = flattenCoffee(coffee)[0]
+		}
+
+		return cs
+	}
+
+	return make([]interface{}, 0)
 }
