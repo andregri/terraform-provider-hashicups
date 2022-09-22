@@ -1,0 +1,72 @@
+name: Terraform Provider Tests
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test.yml'
+      - '**.go'
+
+permissions:
+  # Permission for checking out code
+  contents: read
+
+jobs:
+  acceptance:
+    name: Acceptance Tests
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: "hashicorpdemoapp/product-api-db:v4280cf7"
+        ports:
+          - 15432:5432
+        env:
+          POSTGRES_DB: 'products'
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'password'
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.2.*'
+          terraform_wrapper: false
+
+      - run: pg_isready -h localhost -p 15432
+
+      - name: Start API server container with Docker
+        # Publish port 19090 even if it is discarded by --network=host but shows that container expose port 9090 internally
+        run: docker run -d -p 19090:9090 -v "$(pwd)/docker_compose/gh_conf.json:/config/config.json" -e CONFIG_FILE="/config/config.json" --network=host hashicorpdemoapp/product-api:v4280cf7
+
+      - run: curl localhost:9090/health
+
+      - name: Create a new user to authenticate requests
+        run: curl -v -X POST localhost:9090/signup -d '{"username":"education", "password":"test123"}' 
+
+      - run: go test -v -cover ./...
+        env:
+          TF_ACC: '1'
+          HASHICUPS_URL: 'http://localhost:9090'
+          HASHICUPS_USERNAME: 'education'
+          HASHICUPS_PASSWORD: 'test123'
+
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+      - run: go test -v -cover ./...
+
