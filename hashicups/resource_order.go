@@ -17,50 +17,50 @@ func resourceOrder() *schema.Resource {
 		UpdateContext: resourceOrderUpdate,
 		DeleteContext: resourceOrderDelete,
 		Schema: map[string]*schema.Schema{
-			"last_updated": &schema.Schema{
+			"last_updated": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"items": &schema.Schema{
+			"items": {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"coffee": &schema.Schema{
+						"coffee": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": &schema.Schema{
+									"id": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"name": &schema.Schema{
+									"name": {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
-									"teaser": &schema.Schema{
+									"teaser": {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
-									"description": &schema.Schema{
+									"description": {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
-									"price": &schema.Schema{
+									"price": {
 										Type:     schema.TypeInt,
 										Computed: true,
 									},
-									"image": &schema.Schema{
+									"image": {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
 								},
 							},
 						},
-						"quantity": &schema.Schema{
+						"quantity": {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
@@ -69,7 +69,7 @@ func resourceOrder() *schema.Resource {
 			},
 		},
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 	}
 }
@@ -99,13 +99,14 @@ func resourceOrderCreate(ctx context.Context, d *schema.ResourceData, m interfac
 		ois = append(ois, oi)
 	}
 
-	o, err := c.CreateOrder(ois)
+	o, err := c.CreateOrder(ois, &c.Token)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(strconv.Itoa(o.ID))
 
+	// This will populate the Terraform state to its current state after the resource creation.
 	resourceOrderRead(ctx, d, m)
 
 	return diags
@@ -119,7 +120,7 @@ func resourceOrderRead(ctx context.Context, d *schema.ResourceData, m interface{
 
 	orderID := d.Id()
 
-	order, err := c.GetOrder(orderID)
+	order, err := c.GetOrder(orderID, &c.Token)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -156,7 +157,7 @@ func resourceOrderUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 			ois = append(ois, oi)
 		}
 
-		_, err := c.UpdateOrder(orderID, ois)
+		_, err := c.UpdateOrder(orderID, ois, &c.Token)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -175,7 +176,7 @@ func resourceOrderDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 	orderID := d.Id()
 
-	err := c.DeleteOrder(orderID)
+	err := c.DeleteOrder(orderID, &c.Token)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -189,7 +190,7 @@ func resourceOrderDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 func flattenOrderItems(orderItems *[]hc.OrderItem) []interface{} {
 	if orderItems != nil {
-		ois := make([]interface{}, len(*orderItems), len(*orderItems))
+		ois := make([]interface{}, len(*orderItems))
 
 		for i, orderItem := range *orderItems {
 			oi := make(map[string]interface{})
@@ -214,5 +215,6 @@ func flattenCoffee(coffee hc.Coffee) []interface{} {
 	c["price"] = coffee.Price
 	c["image"] = coffee.Image
 
+	// Notice how this mirrors the coffee schema — a schema.TypeList with a maximum of one item.
 	return []interface{}{c}
 }

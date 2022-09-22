@@ -9,28 +9,35 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func TestAccHashicupsOrderBasic(t *testing.T) {
-	coffeeID := "1"
-	quantity := "2"
+func TestAccHashicupsOrder_basic(t *testing.T) {
+	coffeeID := "4"
+	quantity := "7"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckHashicupsOrderDestroy,
+		CheckDestroy: testAccCheckHashicupsResourceDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckHashicupsOrderConfigBasic(coffeeID, quantity),
+				Config: testAccCheckHashicupsOrderConfig_basic(coffeeID, quantity),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckHashicupsOrderExists("hashicups_order.new"),
+					resource.TestCheckResourceAttr("hashicups_order.new", "items.0.coffee.0.id", "4"),
+					resource.TestCheckResourceAttr("hashicups_order.new", "items.0.quantity", "7"),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckHashicupsOrderDestroy(s *terraform.State) error {
+// testAccCheckHashicupsResourceDestroy verifies the Order
+// has been destroyed
+func testAccCheckHashicupsResourceDestroy(s *terraform.State) error {
+	// retrieve the connection established in Provider configuration
 	c := testAccProvider.Meta().(*hc.Client)
 
+	// loop through the resources in state, verifying each order
+	// is destroyed
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "hashicups_order" {
 			continue
@@ -38,8 +45,9 @@ func testAccCheckHashicupsOrderDestroy(s *terraform.State) error {
 
 		orderID := rs.Primary.ID
 
-		err := c.DeleteOrder(orderID)
+		_, err := c.GetOrder(orderID, &c.Token)
 		if err != nil {
+			fmt.Println(err.Error())
 			return err
 		}
 	}
@@ -47,7 +55,7 @@ func testAccCheckHashicupsOrderDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckHashicupsOrderConfigBasic(coffeeID, quantity string) string {
+func testAccCheckHashicupsOrderConfig_basic(coffeeID, quantity string) string {
 	return fmt.Sprintf(`
 	resource "hashicups_order" "new" {
 		items {
@@ -60,16 +68,16 @@ func testAccCheckHashicupsOrderConfigBasic(coffeeID, quantity string) string {
 	`, coffeeID, quantity)
 }
 
-func testAccCheckHashicupsOrderExists(n string) resource.TestCheckFunc {
+func testAccCheckHashicupsOrderExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-
+		// retrieve the resource by name from state
+		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No OrderID set")
+			return fmt.Errorf("Order ID is not set")
 		}
 
 		return nil

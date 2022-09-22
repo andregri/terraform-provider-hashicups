@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     hashicups = {
-      versions = ["0.3.0"]
-      source = "hashicorp.com/edu/hashicups"
+      version = "0.2"
+      source  = "hashicorp.com/edu/hashicups"
     }
   }
 }
@@ -10,6 +10,7 @@ terraform {
 provider "hashicups" {
   username = "education"
   password = "test123"
+  url      = "http://192.168.1.203:19090"
 }
 
 module "psl" {
@@ -47,13 +48,4 @@ resource "hashicups_order" "edu" {
 
 output "edu_order" {
   value = hashicups_order.edu
-}
-
-
-data "hashicups_order" "first" {
-  id = 1
-}
-
-output "first_order" {
-  value = data.hashicups_order.first
 }
