@@ -6,6 +6,7 @@ import (
 	"time"
 
 	hc "github.com/hashicorp-demoapp/hashicups-client-go"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -92,6 +93,10 @@ func dataSourceCoffeesRead(ctx context.Context, d *schema.ResourceData, m interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	tflog.Info(ctx, "Read coffees data source", map[string]interface{}{
+		"amount": len(coffees),
+	})
 
 	flattenedCoffees := flattenCoffeesData(&coffees)
 	if err := d.Set("coffees", flattenedCoffees); err != nil {
